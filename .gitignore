@@ -1,0 +1,8 @@
+04/cmake-build-debug/
+04/cmake-build-release/
+.iml
+.xml
+04/.idea/04.iml
+04/.idea/misc.xml
+04/.idea/modules.xml
+*.xml
