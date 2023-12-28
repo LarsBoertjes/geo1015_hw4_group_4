@@ -1,4 +1,7 @@
+\documentclass{article}
+
 \input{preamble}
+
 \begin{document}
 
 \input{front_page}
@@ -7,23 +10,72 @@
 \tableofcontents
 \newpage
 
-\input{q1}
-\newpage
-
-\input{q2}
-\newpage
-
-\input{q3}
-\newpage
-
-
 % ------------------------------------------------------------------------------
-% Reference and Cited Works
+% Introduction
 % ------------------------------------------------------------------------------
 
-\bibliographystyle{IEEEtran}
-\bibliography{References.bib}
+\section{Introduction}
+
+This document provides an overview of our workflow to Assignment 4, focusing on the processing of a point cloud to a Canopy Height Model (CHM). Our point cloud source is a designated tile, specifically tile 69BZ2\_13 from the AHN4 dataset. For a more manageable dataset, we extracted a 500x500 meter clip from this tile. The processing pipeline involved extracting ground points and generating a gridded Digital Terrain Model (DTM), identifying vegetation points and creating a grid, and ultimately producing a Canopy Height Model (CHM).
+
+This report will guide you through the steps we took to create a Canopy Height Model from the AHN4 point cloud dataset.
+\newpage
+
+\section{Pick a Team and Assign AHN4 Tile}
+\newpage
+
+
+\section{Download and Prepare the Dataset}
+
+For Assignment 4, we focused on processing a point cloud derived from the designated tile 69BZ2\_13 obtained from GeoTiles in LAS format. This tile covers the small village of Scheulder in Limburg. Figure \ref{fig:full_tile} displays the full tile seen from above using CloudCompare.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.8\linewidth]{img/screenshot_full_tile.png}
+  \caption{Full tile view in CloudCompare.}
+  \label{fig:full_tile}
+\end{figure}
+
+For more convenient processing and as stated in the assignment, we reduced the full tile to a 500x500 meter clipped tile, shown in Figure \ref{fig:cropped_front}. This clipped tile features buildings, forests, water bodies, and also some elevation. In the figure, the clipped tile can be seen as all the points with RGB coloring. The start tile has been colored using a gray scale for the intensity values. This is done to give an indication of the placement of the clipped tile within its context. 
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.8\linewidth]{img/screenshot_cropped_front.png}
+  \caption{Clipped tile (500x500 meters) for more convenient processing.}
+  \label{fig:cropped_front}
+\end{figure}
+The full and clipped tile are located in the EPSG:28992 coordinate system. The full tile spans from (186980, 314980) in the lower-left corner to (188020, 316270) in the top-right corner. The bounding box of the clipped tile ranges from (187466, 315228) in the lower-left corner to (187966, 315728) in the top-right corner.
+
+
+Figure \ref{fig:cropped_elevation} shows some of this elevation, when looking at the clipped tile from the side using CloudCompare.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.8\linewidth]{img/screenshot_cropped_elevation.png}
+  \caption{Cropped tile with buildings, forest, water, and elevation details.}
+  \label{fig:cropped_elevation}
+\end{figure}
+\newpage
+
+\section{Extract Ground and Create Gridded DTM}
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse id libero non arcu varius fermentum. Quisque malesuada nunc vel sapien vehicula, sit amet fringilla ligula aliquet. Nulla facilisi. Vivamus in ligula vitae arcu pellentesque rhoncus. Fusce eu elit nec mi fermentum sagittis. Integer id felis
+\newpage
+
+\section{Extract Vegetation Points and Create Grid}
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse id libero non arcu varius fermentum. Quisque malesuada nunc vel sapien vehicula, sit amet fringilla ligula aliquet. Nulla facilisi. Vivamus in ligula vitae arcu pellentesque rhoncus. Fusce eu elit nec mi fermentum sagittis. Integer id felis
+\newpage
+
+\section{Create the Canopy Height Model (CHM)}
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse id libero non arcu varius fermentum. Quisque malesuada nunc vel sapien vehicula, sit amet fringilla ligula aliquet. Nulla facilisi. Vivamus in ligula vitae arcu pellentesque rhoncus. Fusce eu elit nec mi fermentum sagittis. Integer id felis
+\newpage
+
+\section{References}
+
 
 % ------------------------------------------------------------------------------
 
 \end{document}
+
