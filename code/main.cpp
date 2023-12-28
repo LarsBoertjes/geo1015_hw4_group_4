@@ -35,19 +35,25 @@ typedef Delaunay::Face_handle Face_handle;
 //-- forward declarations of all functions
 std::vector<Point3> read_lasfile(std::string filename, int thin = 1);
 void write_obj(Delaunay &dt);
+void write_lasfile(const char filename[256], std::vector<Point3> points);
 
 int main(int argc, char** argv)
 {
-  //-- read pointcloud from input file
-  std::vector<Point3> lsPts = read_lasfile("../data/69BZ2_13.LAZ", 100000);
+  // read pointcloud from input file
+  std::vector<Point3> lsPts = read_lasfile("../data/69BZ2_13.LAZ", 1000);
+  double shift_x = 186980.00;
+  double shift_y = 314980.00;
 
-  std::cout << lsPts[0] << " ik denk meters? " << std::endl;
-
-  double min_x = 0;
+  // specify the bounding box of 500x500 meters
+  double min_x = 187465.5;
   double max_x = min_x + 500;
-  double min_y = 0;
+  double min_y = 315228.5;
   double max_y = min_y + 500;
 
+  std::cout << "Bounding box EPSG:28992 " << std::endl << "--------------" << std::endl << "x-range: " << min_x << " to " << max_x << std::endl << "y-range: " << min_y << " to " << max_y << "\n\n";
+  std::cout << "Bounding box (local CloudCompare) " << std::endl << "--------------" << std::endl << "x-range: " << min_x - shift_x << " to " << max_x - shift_x << std::endl << "y-range: " << min_y - shift_y << " to " << max_y - shift_y << "\n\n";
+
+  // extract points within bounding box
   std::vector<Point3> filteredPts;
   for (auto pt : lsPts) {
     if (pt.x() >= min_x && pt.x() <= max_x && pt.y() >= min_y && pt.y() <= max_y) {
@@ -55,40 +61,15 @@ int main(int argc, char** argv)
     }
   }
 
+  // write filteredPts to LAS file, so I can check it using cloudcompare
+  std::string ofilename = "cropped.las";
+  //write_lasfile(ofilename.c_str(), filteredPts);
+
+  // lines to check if it did actually crop the points
   std::cout << "Number of points " << lsPts.size() << std::endl;
   std::cout << "Number of points after cropping " << filteredPts.size() << std::endl;
 
-  //-- make delaunay triangulation from lsPts
-  Delaunay dt;
-  Delaunay::Vertex_handle vh;
-  for (auto pt : filteredPts) {
-    vh  = dt.insert(Point2(pt.x(), pt.y()));
-    vh->info() = pt.z();
-  }
 
-
-  //-- save the DT to an OBJ file called "mydt.obj"
-  write_obj(dt);
-
-  //-- equals a rasterio dataset
-  DatasetASC d = DatasetASC(3, 4, 100.0, 100.0, 10.0, -9999.0);
-  
-  //-- you could modify it
-  d.data[1][2] = 666.666;
-  //-- row-col => x-y
-  double x, y;
-  d.rc2xy(2, 0, x, y);
-  std::cout << "(" << x << ", " << y << ")" << std::endl;
-  //-- x-y => row-col
-  int r, c;
-  d.xy2rc(138, 122, r, c);
-  std::cout << "(" << r << ", " << c << ")" << std::endl;
-
-  //-- write the array to a ASC file 
-  d.write("out.asc"); 
-
-  //-- we're done, return 0 to say all went fine
-  return 0;
 }
 
 void write_obj(Delaunay& dt) {
@@ -148,3 +129,5 @@ std::vector<Point3> read_lasfile(std::string filename, int thin) {
   delete lasreader;
   return points;
 }
+
+
