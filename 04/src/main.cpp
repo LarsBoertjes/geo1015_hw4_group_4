@@ -39,40 +39,37 @@ void write_obj(Delaunay &dt);
 int main(int argc, char** argv)
 {
   //-- read pointcloud from input file
-  std::vector<Point3> lsPts = read_lasfile("../data/crop.laz", 1);
-  // std::vector<Point3> lsPts = read_lasfile("../data/crop.laz", 100);
-  std::cout << "Number of points " << lsPts.size() << std::endl;
-  std::cout << lsPts[2] << std::endl;
+  std::vector<Point3> lsPts = read_lasfile("../data/69BZ2_13.LAZ", 100000);
 
+  std::cout << lsPts[0] << " ik denk meters? " << std::endl;
+
+  double min_x = 0;
+  double max_x = min_x + 500;
+  double min_y = 0;
+  double max_y = min_y + 500;
+
+  std::vector<Point3> filteredPts;
+  for (auto pt : lsPts) {
+    if (pt.x() >= min_x && pt.x() <= max_x && pt.y() >= min_y && pt.y() <= max_y) {
+      filteredPts.push_back(pt);
+    }
+  }
+
+  std::cout << "Number of points " << lsPts.size() << std::endl;
+  std::cout << "Number of points after cropping " << filteredPts.size() << std::endl;
+
+  //-- make delaunay triangulation from lsPts
   Delaunay dt;
   Delaunay::Vertex_handle vh;
-  for (auto pt : lsPts) {
+  for (auto pt : filteredPts) {
     vh  = dt.insert(Point2(pt.x(), pt.y()));
     vh->info() = pt.z();
   }
 
-  std::cout << "DT #vertices: " << dt.number_of_vertices() << std::endl;
-  std::cout << "DT #triangles: " << dt.number_of_faces() << std::endl;
 
   //-- save the DT to an OBJ file called "mydt.obj"
   write_obj(dt);
 
-  //-- find triangle containing a point q
-  Point2 q(84656.0, 447059.1);
-  Face_handle fh = dt.locate(q); //-- you get a Face: https://doc.cgal.org/latest/TDS_2/classTriangulationDataStructure__2_1_1Face.html
-  std::cout << fh->vertex(0)->point() << std::endl;
-  std::cout << fh->vertex(1)->point() << std::endl;
-  std::cout << fh->vertex(2)->point() << std::endl;
-  std::cout << "area triangle: " << CGAL::area(fh->vertex(0)->point(), 
-                                               fh->vertex(1)->point(), 
-                                               fh->vertex(2)->point()) << std::endl;
-
-
-  //--fetch its neighbour (there are 3)
-  Face_handle n0 = fh->neighbor(0);
-  std::cout << dt.is_infinite(n0) << std::endl;
-  std::cout << n0->vertex(0)->point() << std::endl;
-  std::cout << n0->vertex(0)->info() << std::endl;
   //-- equals a rasterio dataset
   DatasetASC d = DatasetASC(3, 4, 100.0, 100.0, 10.0, -9999.0);
   
