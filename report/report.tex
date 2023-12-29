@@ -31,7 +31,7 @@ For Assignment 4, we focused on processing a point cloud derived from the design
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.8\linewidth]{img/screenshot_full_tile.png}
+  \includegraphics[width=0.5\linewidth]{img/screenshot_full_tile.png}
   \caption{Full tile view in CloudCompare.}
   \label{fig:full_tile}
 \end{figure}
@@ -40,8 +40,8 @@ For more convenient processing and as stated in the assignment, we reduced the f
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.8\linewidth]{img/screenshot_cropped_front.png}
-  \caption{Clipped tile (500x500 meters) for more convenient processing.}
+  \includegraphics[width=0.5\linewidth]{img/screenshot_cropped_front.png}
+  \caption{Clipped tile (500x500 meters) shown in RGB within context of full tile}
   \label{fig:cropped_front}
 \end{figure}
 The full and clipped tile are located in the EPSG:28992 coordinate system. The full tile spans from (186980, 314980) in the lower-left corner to (188020, 316270) in the top-right corner. The bounding box of the clipped tile ranges from (187466, 315228) in the lower-left corner to (187966, 315728) in the top-right corner.
@@ -51,11 +51,39 @@ Figure \ref{fig:cropped_elevation} shows some of this elevation, when looking at
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.8\linewidth]{img/screenshot_cropped_elevation.png}
-  \caption{Cropped tile with buildings, forest, water, and elevation details.}
+  \includegraphics[width=0.5\linewidth]{img/screenshot_cropped_elevation.png}
+  \caption{Side view of the cropped tile showcasing elevation}
   \label{fig:cropped_elevation}
 \end{figure}
 \newpage
+
+In the first part of our C++ program, the tile cropping process is executed. The LAS file is read using the `lasreader.hpp` extension. The point cloud data is stored in a vector with the data type `Point3`, which is a CGAL data type. When reading the file, a thinning parameter, is passed to the read function. This parameter takes every nth point from the dataset, making sure the size of the data will be managable to work with. For now the thinning parameter is set to 1000, dividing the number of points of the dataset by the same amount.
+
+Next, we specify the minimum and maximum x and y values by using the lower-left corner of the bounding box, as shown in the added figures above. Additionally, 500 meter is added to obtain the maximum x and y values.
+
+\newpage
+
+The C++ code snippet is as follows:
+
+\begin{lstlisting}[style=cppstyle, caption={Specifying bounding box}, label={yourlabel}]
+std::vector<Point3> lsPts = read_lasfile("../data/69BZ2_13.LAZ", 1000);
+
+// Specify the bounding box of 500x500 meters
+double min_x = 187465.5;
+double max_x = min_x + 500;
+double min_y = 315228.5;
+double max_y = min_y + 500;
+
+// extract points within bounding box
+std::vector<Point3> filteredPts;
+for (auto pt : lsPts) {
+    if (pt.x() >= min_x && pt.x() <= max_x && pt.y() >= min_y && pt.y() <= max_y) {
+      filteredPts.push_back(pt);
+    }
+  }
+\end{lstlisting}
+% Maybe this is not particularly necessary since we provide the code anyway,
+% but I put it in for now; we can always delete it.
 
 \section{Extract Ground and Create Gridded DTM}
 
@@ -78,4 +106,3 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse id libero n
 % ------------------------------------------------------------------------------
 
 \end{document}
-
