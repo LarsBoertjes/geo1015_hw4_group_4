@@ -41,8 +41,6 @@ int main(int argc, char** argv)
 {
   // read pointcloud from input file
   std::vector<Point3> lsPts = read_lasfile("../data/69BZ2_13.LAZ", 1000);
-  double shift_x = 186980.00;
-  double shift_y = 314980.00;
 
   // specify the bounding box of 500x500 meters
   double min_x = 187465.5;
@@ -51,7 +49,7 @@ int main(int argc, char** argv)
   double max_y = min_y + 500;
 
   std::cout << "Bounding box EPSG:28992 " << std::endl << "--------------" << std::endl << "x-range: " << min_x << " to " << max_x << std::endl << "y-range: " << min_y << " to " << max_y << "\n\n";
-  std::cout << "Bounding box (local CloudCompare) " << std::endl << "--------------" << std::endl << "x-range: " << min_x - shift_x << " to " << max_x - shift_x << std::endl << "y-range: " << min_y - shift_y << " to " << max_y - shift_y << "\n\n";
+  
 
   // extract points within bounding box
   std::vector<Point3> filteredPts;
@@ -62,13 +60,34 @@ int main(int argc, char** argv)
   }
 
   // write filteredPts to LAS file, so I can check it using cloudcompare
-  std::string ofilename = "cropped.las";
-  //write_lasfile(ofilename.c_str(), filteredPts);
+  // std::string ofilename = "cropped.las";
+  // write_lasfile(ofilename.c_str(), filteredPts);
 
   // lines to check if it did actually crop the points
   std::cout << "Number of points " << lsPts.size() << std::endl;
   std::cout << "Number of points after cropping " << filteredPts.size() << std::endl;
 
+  // Step 1 of Ground filtering with TIN refinement: Construction of a rudimentary initial TIN
+  Delaunay dt;
+  Delaunay::Vertex_handle vh;
+  for (auto pt : filteredPts) {
+    vh = dt.insert(Point2(pt.x(), pt.y()));
+    vh->info() = pt.z();
+  }
+
+  std::cout << "DT #vertices: " << dt.number_of_vertices() << std::endl;
+  std::cout << "DT #triangles: " << dt.number_of_faces() << std::endl;
+
+  // Step 2: Computation of two geometric properties for each point that is not already labelled as ground
+  // make an empty list to fill with ground points
+  std::vector<Point3> groundPts;
+
+  int count = 0;
+  for (auto vertex_it = dt.finite_vertices_begin(); vertex_it != dt.finite_vertices_end() && count < 4; ++vertex_it) {
+      Vertex_handle vh = vertex_it;
+      std::cout << vh->point() << std::endl;
+      ++count;
+  }
 
 }
 
