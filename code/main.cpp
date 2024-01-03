@@ -36,6 +36,7 @@ typedef Delaunay::Face_handle Face_handle;
 std::vector<Point3> read_lasfile(std::string filename, int thin = 1);
 void write_obj(Delaunay &dt);
 void write_lasfile(const char filename[256], std::vector<Point3> points);
+std::vector<Point3> extractLowestPtsInGrid (const std::vector<Point3>& points, int gridRows, int gridCols, double min_x, double max_x, double min_y, double max_y);
 
 int main(int argc, char** argv)
 {
@@ -52,25 +53,29 @@ int main(int argc, char** argv)
   
 
   // extract points within bounding box
-  std::vector<Point3> filteredPts;
+  std::vector<Point3> croppedPts;
   for (auto pt : lsPts) {
     if (pt.x() >= min_x && pt.x() <= max_x && pt.y() >= min_y && pt.y() <= max_y) {
-      filteredPts.push_back(pt);
+      croppedPts.push_back(pt);
     }
   }
 
-  // write filteredPts to LAS file, so I can check it using cloudcompare
-  // std::string ofilename = "cropped.las";
-  // write_lasfile(ofilename.c_str(), filteredPts);
-
   // lines to check if it did actually crop the points
   std::cout << "Number of points " << lsPts.size() << std::endl;
-  std::cout << "Number of points after cropping " << filteredPts.size() << std::endl;
+  std::cout << "Number of points after cropping " << croppedPts.size() << std::endl;
+
+  // Step 0 of Ground filtering with TIN refinement: create array with locally lowest points in 2D grid
+  // -- The size of the largest building is around 23x20 meters so we will use a grid resolution of almost 30x30m (500x500 / 17 rows, columns = 29.4 x 29.4)
+  // -- Divide the 500x500m into a grid with 17 columns and rows and per cell push the cell with the lowest pt.z() value to groundPts
+  std::vector<Point3> groundPts = extractLowestPtsInGrid(croppedPts, 17, 17, min_x, max_x, min_y, max_y);
+
+  std::cout << "Number of points in groundPts " << groundPts.size() << std::endl;
+  // this should be 17 * 17 = 289
 
   // Step 1 of Ground filtering with TIN refinement: Construction of a rudimentary initial TIN
   Delaunay dt;
   Delaunay::Vertex_handle vh;
-  for (auto pt : filteredPts) {
+  for (auto pt : groundPts) {
     vh = dt.insert(Point2(pt.x(), pt.y()));
     vh->info() = pt.z();
   }
@@ -79,15 +84,40 @@ int main(int argc, char** argv)
   std::cout << "DT #triangles: " << dt.number_of_faces() << std::endl;
 
   // Step 2: Computation of two geometric properties for each point that is not already labelled as ground
-  // make an empty list to fill with ground points
-  std::vector<Point3> groundPts;
+  // push all new ground points to groundPts vector
+  double d_max = 5;
+  double alpha_max = 30;
 
-  int count = 0;
-  for (auto vertex_it = dt.finite_vertices_begin(); vertex_it != dt.finite_vertices_end() && count < 4; ++vertex_it) {
-      Vertex_handle vh = vertex_it;
-      std::cout << vh->point() << std::endl;
-      ++count;
+  for (auto pt : croppedPts) {
+    // check if pt is not already in groundPts
+    if (std::find(groundPts.begin(), groundPts.end(), pt) == groundPts.end()) {
+      // find the triangle containing the point
+      Point2 pt_xy(pt.x(), pt.y());
+      Face_handle fh = dt.locate(pt_xy);
+
+      // to do: check if distance between pt.z() and plane fh is not more than d_max
+      //double d = dt.
+      
+      for (int i = 0; i < 3; i++) {
+        double max_alpha = 0.0;
+
+        if (dt.is_infinite(fh->vertex(i))) {
+          // do not do computations using infinite vertices
+          std::cout << fh->vertex(i)->point() << " is infinite vertex" << std::endl;
+        } else {
+          std::cout << fh->vertex(i)->point() << std::endl;
+          std::cout << "z van het punt: " << fh->vertex(i)->point() << std::endl;
+          // to do: compute angle between 2 points by comparing the horizontal difference and vertical difference
+          // to do: store angle in max_alpha if angle > max_alpha
+
+        }
+      }
+
+      std::cout << "--------------------" << std::endl;
+
+    }
   }
+  
 
 }
 
@@ -149,4 +179,36 @@ std::vector<Point3> read_lasfile(std::string filename, int thin) {
   return points;
 }
 
+std::vector<Point3> extractLowestPtsInGrid (const std::vector<Point3>& points, int gridRows, int gridCols, double min_x, double max_x, double min_y, double max_y) {
+  double cellWidth = (max_x - min_x) / gridCols;
+  double cellHeight = (max_y - min_y) / gridRows;
 
+  // create a 2D vector to store the lowest point in each cell
+  std::vector<std::vector<Point3>> lowestPoints(gridRows, std::vector<Point3>(gridCols, Point3()));
+
+  // initialize lowest z values to positve infinity
+  std::vector<std::vector<double>> lowestZValues(gridRows, std::vector<double>(gridCols, std::numeric_limits<double>::infinity()));
+
+  // iterate through the points and update the lowest point in each cell
+    for (const auto& pt : points) {
+        int col = static_cast<int>((pt.x() - min_x) / cellWidth);
+        int row = static_cast<int>((pt.y() - min_y) / cellHeight);
+
+        if (col >= 0 && col < gridCols && row >= 0 && row < gridRows) {
+            if (pt.z() < lowestZValues[row][col]) {
+                lowestZValues[row][col] = pt.z();
+                lowestPoints[row][col] = pt;
+            }
+        }
+    }
+
+    // flatten the 2D vector into a 1D vector of initial groundPoints
+    std::vector<Point3> result;
+    for (int row = 0; row < gridRows; ++row) {
+      for (int col = 0; col < gridCols; ++col) {
+        result.push_back(lowestPoints[row][col]);
+      }
+    }
+
+    return result;
+}
