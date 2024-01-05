@@ -49,9 +49,6 @@ int main(int argc, char** argv)
   double min_y = 315228.5;
   double max_y = min_y + 500;
 
-  std::cout << "Bounding box EPSG:28992 " << std::endl << "--------------" << std::endl << "x-range: " << min_x << " to " << max_x << std::endl << "y-range: " << min_y << " to " << max_y << "\n\n";
-  
-
   // extract points within bounding box
   std::vector<Point3> croppedPts;
   for (auto pt : lsPts) {
@@ -60,17 +57,10 @@ int main(int argc, char** argv)
     }
   }
 
-  // lines to check if it did actually crop the points
-  std::cout << "Number of points " << lsPts.size() << std::endl;
-  std::cout << "Number of points after cropping " << croppedPts.size() << std::endl;
-
   // Step 0 of Ground filtering with TIN refinement: create array with locally lowest points in 2D grid
   // -- The size of the largest building is around 23x20 meters so we will use a grid resolution of almost 30x30m (500x500 / 17 rows, columns = 29.4 x 29.4)
   // -- Divide the 500x500m into a grid with 17 columns and rows and per cell push the cell with the lowest pt.z() value to groundPts
   std::vector<Point3> groundPts = extractLowestPtsInGrid(croppedPts, 17, 17, min_x, max_x, min_y, max_y);
-
-  std::cout << "Number of points in groundPts " << groundPts.size() << std::endl;
-  // this should be 17 * 17 = 289
 
   // Step 1 of Ground filtering with TIN refinement: Construction of a rudimentary initial TIN
   Delaunay dt;
@@ -79,9 +69,6 @@ int main(int argc, char** argv)
     vh = dt.insert(Point2(pt.x(), pt.y()));
     vh->info() = pt.z();
   }
-
-  std::cout << "DT #vertices: " << dt.number_of_vertices() << std::endl;
-  std::cout << "DT #triangles: " << dt.number_of_faces() << std::endl;
 
   // Step 2: Computation of two geometric properties for each point that is not already labelled as ground
   // push all new ground points to groundPts vector
@@ -94,10 +81,10 @@ int main(int argc, char** argv)
       // find the triangle containing the point
       Point2 pt_xy(pt.x(), pt.y());
       Face_handle fh = dt.locate(pt_xy);
+      std::cout << pt_xy << " " << pt.z() << " origin" << std::endl << std::endl;
 
       // to do: check if distance between pt.z() and plane fh is not more than d_max
-      //double d = dt.
-      
+
       for (int i = 0; i < 3; i++) {
         double max_alpha = 0.0;
 
@@ -105,15 +92,15 @@ int main(int argc, char** argv)
           // do not do computations using infinite vertices
           std::cout << fh->vertex(i)->point() << " is infinite vertex" << std::endl;
         } else {
-          std::cout << fh->vertex(i)->point() << std::endl;
-          std::cout << "z van het punt: " << fh->vertex(i)->point() << std::endl;
+
+          std::cout << fh->vertex(i)->point() << " " << fh->vertex(i)->info() << std::endl;
           // to do: compute angle between 2 points by comparing the horizontal difference and vertical difference
           // to do: store angle in max_alpha if angle > max_alpha
 
         }
       }
 
-      std::cout << "--------------------" << std::endl;
+    std::cout << "-------------------------------------" << std::endl;
 
     }
   }
