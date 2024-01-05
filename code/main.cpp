@@ -7,6 +7,7 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 #include <string>
+#include <cmath>
 
 
 //-- we're using CGAL DT instead of startinpy
@@ -37,6 +38,9 @@ std::vector<Point3> read_lasfile(std::string filename, int thin = 1);
 void write_obj(Delaunay &dt);
 void write_lasfile(const char filename[256], std::vector<Point3> points);
 std::vector<Point3> extractLowestPtsInGrid (const std::vector<Point3>& points, int gridRows, int gridCols, double min_x, double max_x, double min_y, double max_y);
+double barycentricInterpolation(double x, double y, std::vector<double>& x_coord, std::vector<double>& y_coord, std::vector<double>& z_vals);
+double maxAngleDegrees(double x, double y, double z, std::vector<double>& x_coord, std::vector<double>& y_coord, std::vector<double>& z_vals);
+void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts);                                
 
 int main(int argc, char** argv)
 {
@@ -62,6 +66,10 @@ int main(int argc, char** argv)
   // -- Divide the 500x500m into a grid with 17 columns and rows and per cell push the cell with the lowest pt.z() value to groundPts
   std::vector<Point3> groundPts = extractLowestPtsInGrid(croppedPts, 17, 17, min_x, max_x, min_y, max_y);
 
+  std::cout << "Number of groundPts before adding: " << groundPts.size() << std::endl;
+  std::cout << "Number of croppedPts before adding: " << croppedPts.size() << std::endl; 
+  std::cout << std::endl;
+
   // Step 1 of Ground filtering with TIN refinement: Construction of a rudimentary initial TIN
   Delaunay dt;
   Delaunay::Vertex_handle vh;
@@ -72,39 +80,84 @@ int main(int argc, char** argv)
 
   // Step 2: Computation of two geometric properties for each point that is not already labelled as ground
   // push all new ground points to groundPts vector
-  double d_max = 5;
-  double alpha_max = 30;
+  double d_max = 3;
+  double alpha_max = 5;
 
-  for (auto pt : croppedPts) {
+  for (int i = 0; i < croppedPts.size(); ++i) {
     // check if pt is not already in groundPts
-    if (std::find(groundPts.begin(), groundPts.end(), pt) == groundPts.end()) {
+    if (std::find(groundPts.begin(), groundPts.end(), croppedPts[i]) == groundPts.end()) {
       // find the triangle containing the point
-      Point2 pt_xy(pt.x(), pt.y());
+      Point2 pt_xy(croppedPts[i].x(), croppedPts[i].y());
       Face_handle fh = dt.locate(pt_xy);
-      std::cout << pt_xy << " " << pt.z() << " origin" << std::endl << std::endl;
 
-      // to do: check if distance between pt.z() and plane fh is not more than d_max
+      std::vector<double> x_coord;
+      std::vector<double> y_coord;
+      std::vector<double> z_vals;
 
       for (int i = 0; i < 3; i++) {
-        double max_alpha = 0.0;
-
+        // if one of the vertices is of the big triangle don't add the vertex to list
         if (dt.is_infinite(fh->vertex(i))) {
-          // do not do computations using infinite vertices
-          std::cout << fh->vertex(i)->point() << " is infinite vertex" << std::endl;
+          continue;
         } else {
-
-          std::cout << fh->vertex(i)->point() << " " << fh->vertex(i)->info() << std::endl;
-          // to do: compute angle between 2 points by comparing the horizontal difference and vertical difference
-          // to do: store angle in max_alpha if angle > max_alpha
-
+          x_coord.push_back(fh->vertex(i)->point().x());
+          y_coord.push_back(fh->vertex(i)->point().y());
+          z_vals.push_back(fh->vertex(i)->info());
         }
       }
 
-    std::cout << "-------------------------------------" << std::endl;
+      double heightPlaneAtP;
 
+      if (x_coord.size() == 3) {
+        heightPlaneAtP = barycentricInterpolation(croppedPts[i].x(), croppedPts[i].y(), x_coord, y_coord, z_vals);
+      } else if (x_coord.size() == 2) {
+        // Do a weighted average of the 2 finite points
+      } heightPlaneAtP = (z_vals[0] + z_vals[1]) / 2;
+
+      double heightDifference = abs(heightPlaneAtP - croppedPts[i].z());
+      double maxAngle = maxAngleDegrees(croppedPts[i].x(), croppedPts[i].y(), croppedPts[i].z(), x_coord, y_coord, z_vals);
+
+      if (maxAngle < alpha_max && heightDifference < d_max) {
+        groundPts.push_back(croppedPts[i]);
+      }
     }
   }
+
+  std::cout << "Number of groundPts after adding: " << groundPts.size() << std::endl;
+  std::cout << "Number of croppedPts after adding: " << croppedPts.size() << std::endl; 
+
+  // Please perform the laPlace Interpolation here and create a gridded DTM 50cmX50cm
+
+  DatasetASC d = DatasetASC(1000, 1000, min_x, min_y, 0.5, -9999.0);
   
+  //-- you could modify it
+  //d.data[1][2] = 666.666;
+  //-- row-col => x-y
+  //double x, y;
+  //d.rc2xy(2, 0, x, y);
+  //std::cout << "(" << x << ", " << y << ")" << std::endl;
+  //-- x-y => row-col
+  int r, c;
+  d.xy2rc(138, 122, r, c);
+  std::cout << "(" << r << ", " << c << ")" << std::endl;
+
+  //-- write the array to a ASC file 
+  //d.write("out.asc"); 
+
+  laplaceInterpolation(d, groundPts);
+
+  // Write the gridded DTM to an ASC file
+  d.write("dtm.asc");
+
+  std::filesystem::path filePath("dtm.asc");
+    if (std::filesystem::exists(filePath)) {
+        std::cout << "ASC file written to: " << filePath << std::endl;
+    } else {
+        std::cerr << "Error: ASC file not created." << std::endl;
+    }
+    
+  //-- we're done, return 0 to say all went fine
+  return 0;
+
 
 }
 
@@ -198,4 +251,81 @@ std::vector<Point3> extractLowestPtsInGrid (const std::vector<Point3>& points, i
     }
 
     return result;
+}
+
+double barycentricInterpolation(double x, double y, std::vector<double>& x_coord, 
+                                                    std::vector<double>& y_coord, 
+                                                    std::vector<double>& z_vals) {
+    
+    double x1 = x_coord[0];
+    double y1 = y_coord[0];
+    double z1 = z_vals[0];
+
+    double x2 = x_coord[1];
+    double y2 = y_coord[1];
+    double z2 = z_vals[1];
+
+    double x3 = x_coord[2];
+    double y3 = y_coord[2];
+    double z3 = z_vals[2];
+
+    double detT = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
+    double alpha = ((y2 - y3) * (x - x3) + (x3 - x2) * (y - y3)) / detT;
+    double beta = ((y3 - y1) * (x - x3) + (x1 - x3) * (y - y3)) / detT;
+    double gamma = 1.0 - alpha - beta;
+
+    double interpolatedValue = alpha * z1 + beta * z2 + gamma * z3;
+
+    return interpolatedValue;
+}
+
+double maxAngleDegrees(double x, double y, double z, std::vector<double>& x_coord,
+                                                 std::vector<double>& y_coord,
+                                                 std::vector<double>& z_vals) {
+
+    double maxAngle = -std::numeric_limits<double>::infinity();
+
+    for (int i = 0; i < x_coord.size(); ++i) {
+      double xy_diff = std::sqrt(std::pow(x - x_coord[i], 2) + std::pow(y - y_coord[i], 2));
+      double z_diff = z - z_vals[i];
+
+      // calculate angle between two points using the xy_diff and z_diff
+      double angle = atan(z_diff / xy_diff);
+
+      if (angle > maxAngle) {
+        maxAngle = angle;
+      }
+    }
+
+    return maxAngle * (180.0 / M_PI); 
+}
+
+void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts) {
+    // Iterate over each cell in the DTM
+    for (int row = 0; row < dtm._nrows; ++row) {
+        for (int col = 0; col < dtm._ncols; ++col) {
+            double x, y;
+            dtm.rc2xy(row, col, x, y);
+
+            // Find the nearest neighbor ground points
+            std::vector<Point3> neighbors;
+            for (const auto &pt : groundPts) {
+                double distance = std::hypot(pt.x() - x, pt.y() - y);
+                if (distance < 2.5) {  // Consider points within a radius of 2.5 meters
+                    neighbors.push_back(pt);
+                }
+            }
+
+            // Perform Laplace interpolation
+            if (!neighbors.empty()) {
+                double sumZ = 0.0;
+                for (const auto &neighbor : neighbors) {
+                    sumZ += neighbor.z();
+                }
+                dtm.data[row][col] = sumZ / neighbors.size();
+            } else {
+                dtm.data[row][col] = std::numeric_limits<double>::quiet_NaN();
+            }
+        }
+    }
 }
