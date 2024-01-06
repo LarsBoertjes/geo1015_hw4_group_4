@@ -40,7 +40,7 @@ void write_lasfile(const char filename[256], std::vector<Point3> points);
 std::vector<Point3> extractLowestPtsInGrid (const std::vector<Point3>& points, int gridRows, int gridCols, double min_x, double max_x, double min_y, double max_y);
 double barycentricInterpolation(double x, double y, std::vector<double>& x_coord, std::vector<double>& y_coord, std::vector<double>& z_vals);
 double maxAngleDegrees(double x, double y, double z, std::vector<double>& x_coord, std::vector<double>& y_coord, std::vector<double>& z_vals);
-void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts);                                
+void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts, Delaunay dt);                                
 
 int main(int argc, char** argv)
 {
@@ -136,24 +136,19 @@ int main(int argc, char** argv)
   //d.rc2xy(2, 0, x, y);
   //std::cout << "(" << x << ", " << y << ")" << std::endl;
   //-- x-y => row-col
-  int r, c;
-  d.xy2rc(138, 122, r, c);
-  std::cout << "(" << r << ", " << c << ")" << std::endl;
+  //int r, c;
+  //d.xy2rc(138, 122, r, c);
+  //std::cout << "(" << r << ", " << c << ")" << std::endl;
 
   //-- write the array to a ASC file 
   //d.write("out.asc"); 
 
-  laplaceInterpolation(d, groundPts);
+  laplaceInterpolation(d, groundPts, dt);
+
+  std::cout << groundPts[0] << " " << groundPts[1] << " " << groundPts[2] << std::endl;
 
   // Write the gridded DTM to an ASC file
-  d.write("dtm.asc");
-
-  std::filesystem::path filePath("dtm.asc");
-    if (std::filesystem::exists(filePath)) {
-        std::cout << "ASC file written to: " << filePath << std::endl;
-    } else {
-        std::cerr << "Error: ASC file not created." << std::endl;
-    }
+  d.write("../data/dtm.asc");
     
   //-- we're done, return 0 to say all went fine
   return 0;
@@ -300,32 +295,20 @@ double maxAngleDegrees(double x, double y, double z, std::vector<double>& x_coor
     return maxAngle * (180.0 / M_PI); 
 }
 
-void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts) {
+void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts, Delaunay dt) {
     // Iterate over each cell in the DTM
-    for (int row = 0; row < dtm._nrows; ++row) {
-        for (int col = 0; col < dtm._ncols; ++col) {
-            double x, y;
-            dtm.rc2xy(row, col, x, y);
+    int count = 0;
 
-            // Find the nearest neighbor ground points
-            std::vector<Point3> neighbors;
-            for (const auto &pt : groundPts) {
-                double distance = std::hypot(pt.x() - x, pt.y() - y);
-                if (distance < 2.5) {  // Consider points within a radius of 2.5 meters
-                    neighbors.push_back(pt);
-                }
-            }
-
-            // Perform Laplace interpolation
-            if (!neighbors.empty()) {
-                double sumZ = 0.0;
-                for (const auto &neighbor : neighbors) {
-                    sumZ += neighbor.z();
-                }
-                dtm.data[row][col] = sumZ / neighbors.size();
-            } else {
-                dtm.data[row][col] = std::numeric_limits<double>::quiet_NaN();
-            }
+    for (int row = 0; row < dtm._nrows && count < 25; ++row) {
+        for (int col = 0; col < dtm._ncols && count < 25; ++col) {
+          double cell_center_x = static_cast<double>(dtm._xllcorner + (dtm._cellsize * col) + (dtm._cellsize / 2.0));
+          double cell_center_y = dtm._yllcorner + (dtm._cellsize * row) + (static_cast<double>(dtm._cellsize) / 2.0);
+          std::cout << row << " " << col << " has cell center: (" << cell_center_x << "," << cell_center_y << ")" << std::endl;        
+          Point2 pt_xy(cell_center_x, cell_center_y);
+          Face_handle fh = dt.locate(pt_xy);
+          std::cout << "and it is located in triangle with vertex0: " << fh->vertex(0)->point() << std::endl;
+          count++;    
         }
     }
 }
+
