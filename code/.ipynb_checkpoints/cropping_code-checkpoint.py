@@ -3,11 +3,11 @@
 # LAS file where every point contains all attributes except the attributes infrared, deviation, amplitude, reflectance
 
 import pandas as pd
-from pyntcloud import PyntCloud
 import pdal
 import json
+import numpy as np
 
-input_file = '../data/69BZ2_13.LAZ'
+inputfile = '../data/69BZ2_13.LAZ'
 # Our boundaries
 min_x = 187465.5
 max_x = min_x + 500
@@ -22,10 +22,6 @@ def get_points(bounds, file):
             {
                 "type": "filters.crop",  # The crop filter removes points that fall outside or inside a cropping bounding box 
                 "bounds": f"([{bounds[0]},{bounds[1]}],[{bounds[2]},{bounds[3]}])"  # input parameters for the filter, in the case the boundaries for our window
-            },
-            {
-                "type": "writers.las", 
-                "filename": "cropped_file.las" # Output file name without the dimensions infrared, deviation, amplitude, reflectance
             }
         ]
     }
@@ -36,7 +32,7 @@ def get_points(bounds, file):
     pd_pcl = pd.DataFrame(point_cloud)  # convert the point_cloud arrays to Panda DataFrame
     attribute_names = list(point_cloud.dtype.names)
     pd_pcl.columns = attribute_names  # the column names for the Panda DataFrame   
-    return pd_pcl  # create a PyntCloud object from the Pandas DataFrame and return it.
+    return pd_pcl
 
 def main():
     boundary = [min_x, max_x, min_y, max_y]
