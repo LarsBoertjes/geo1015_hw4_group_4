@@ -1,26 +1,24 @@
 ## This files returns a:
 # pandas dataframe in a csv file
+# LAS file where every point contains all attributes except the attributes infrared, deviation, amplitude, reflectance
 
 import pandas as pd
 import pdal
 import json
 import numpy as np
 
-inputfile = '../data/69BZ2_13.LAZ'
-# Our boundaries
-min_x = 187465.5
-max_x = min_x + 500
-min_y = 315228.5
-max_y = min_y + 500
-
-def get_points(bounds, file):
+def get_points(bounds, input_las_file, output_las_file, output_csv_file):
     # make pipelines to input 
     _pipeline = {
         "pipeline": [
-            file,  # input las file
+            input_las_file,  # input las file
             {
                 "type": "filters.crop",  # The crop filter removes points that fall outside or inside a cropping bounding box 
                 "bounds": f"([{bounds[0]},{bounds[1]}],[{bounds[2]},{bounds[3]}])"  # input parameters for the filter, in the case the boundaries for our window
+            },
+            {
+                "type": "writers.las", 
+                "filename": output_las_file # Output file name
             }
         ]
     }
@@ -31,12 +29,4 @@ def get_points(bounds, file):
     pd_pcl = pd.DataFrame(point_cloud)  # convert the point_cloud arrays to Panda DataFrame
     attribute_names = list(point_cloud.dtype.names)
     pd_pcl.columns = attribute_names  # the column names for the Panda DataFrame   
-    return pd_pcl
-
-def main():
-    boundary = [min_x, max_x, min_y, max_y]
-    pd_pcl = get_points(boundary, input_file)
-    pd_pcl.to_csv("cropped_file.csv")
-
-if __name__ == '__main__':
-    main()
+    pd_pcl.to_csv(output_csv_file)
