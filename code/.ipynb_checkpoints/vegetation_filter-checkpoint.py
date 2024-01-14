@@ -26,8 +26,8 @@ def filter_vegetation(input_file_las, input_file_csv, output_file):
     result.write(output_file)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python vegetation_filter.py input.las output.las")
+    if len(sys.argv) != 4:
+        print("Usage: !python vegetation_filter.py input.las input.csv output.las")
         sys.exit(1)
 
     input_file_las = sys.argv[1]

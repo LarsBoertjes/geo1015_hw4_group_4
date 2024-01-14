@@ -1,6 +1,5 @@
 import sys
 import rasterio
-import numpy as np
 import laspy
 from rasterio.transform import from_origin
 
@@ -63,7 +62,7 @@ def main(pointcloud_file, dtm_file, output_file):
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print("Arguments to be passed: pointcloud_file.las dtm_file.asc output_file.tiff")
+        print("Usage: !python pointcloud_file.las dtm_file.asc output_file.tiff")
     else:
         pointcloud_file = sys.argv[1]
         dtm_file = sys.argv[2]

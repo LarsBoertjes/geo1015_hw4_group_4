@@ -1,6 +1,5 @@
 import sys
 import rasterio
-import numpy as np
 import laspy
 from rasterio.transform import from_origin
 
@@ -48,29 +47,24 @@ def write_output_tiff(output_file, dtm_data, min_bounding_box_x, max_bounding_bo
         dst.write(dtm_data, 1)
 
 def main(pointcloud_file, dtm_file, output_file):
-    print(f"Reading DTM file: {dtm_file}")
     dtm_data = read_geospatial_file(dtm_file)
 
     with laspy.open(pointcloud_file, mode='r') as fh:
         las = fh.read()
-        print(f'Points from data: {len(las.points)}')
 
         min_bounding_box_x = min(las['x'])
         min_bounding_box_y = min(las['y'])
         max_bounding_box_y = max(las['y'])
 
-    print("rasterizing vegetation pointcloud...")
     process_vegetation_points(las, dtm_data, min_bounding_box_x, min_bounding_box_y)
 
-    print("Writing output TIFF file...")
     write_output_tiff(output_file, dtm_data, min_bounding_box_x, max_bounding_box_y)
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print("Arguments to be passed: pointcloud_file.las dtm_file.asc output_file.tiff")
+        print("Usage: !python pointcloud_file.las dtm_file.asc output_file.tiff")
     else:
         pointcloud_file = sys.argv[1]
         dtm_file = sys.argv[2]
         output_file = sys.argv[3]
         main(pointcloud_file, dtm_file, output_file)
-        print(f'Canopy height raster written to: {output_file}')
