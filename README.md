@@ -3,7 +3,7 @@ Lars Boertjes - 4704541,
 Noah Alting - 4828968,
 Marieke van Arnhem - 4918738
 
-*** DOCUMENTATION ****
+*** DOCUMENTATION ***
 
 report editor: https://www.overleaf.com/3335222756vbxkvhxqjdzb#79d9ec
 
@@ -33,16 +33,16 @@ C++ code explaining - @Lars, die moet namelijk als eerst
 
 STEP 2.
 Go to main.py and check the input files and boundaries:
-- input_las_file (line 2): make sure you have the required AHN4 tile in the "code" folder.
+- input_las_file (line 2): make sure you have the required AHN4 tile in the "code" folder and changed the name in line 2 to your AHN4 tile name.
 - input_dtm_file (line 4): make sure you have completed step 1 above. This will in fact provide the required dtm (dtm.asc) of your AHN4 tile in the "code" folder.
 - min_x, min_x, max_x, max_y (lines 7-10): Change the x and y values to get the desired boundaries for your cropped file. Change min_x and min_y to the minimum x and minimum y values for your cropped file. Maximum x and maximum y are automatically generated since it is a 500x500m grid.
 
 Now run the main.py file, this will create five files in the "code" folder. If you have not changed the names of the output files in lines 19-23, the following files are created:
-"cropped_file.las": the cropped area as LAS file. 
-"cropped_file.csv": the cropped area exported as CSV.
-"classified_vegetation.las": all points that are classified (by our algorithm) as vegetation.
-"canopy_height.tiff": the DSM of vegetation.
-"chm.tiff": the canopy heigt model (CHM) of your area.
+- "cropped_file.las": the cropped area as LAS file. 
+- "cropped_file.csv": the cropped area exported as CSV.
+- "classified_vegetation.las": all points that are classified (by our algorithm) as vegetation.
+- "canopy_height.tiff": the DSM of vegetation.
+- "chm.tiff": the canopy heigt model (CHM) of your area.
 
 --------------------------------------------------------------------------
 *** RUNNING INDIVIDUAL STEPS OF THE ASSIGNMENT *** 
