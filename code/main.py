@@ -19,7 +19,7 @@ from create_chm import subtract_rasters as create_chm_function
 output_las_cropped_file = "cropped_file.las"
 output_csv_cropped_file = "cropped_file.csv"
 output_vegetation_las = "classified_vegetation.las"
-canopy_height_tiff = "canopy_height.tiff"
+canopy_height_tiff = "step4.tiff"
 output_chm_file = "chm.tiff"
 
 boundary = [min_x, max_x, min_y, max_y]
