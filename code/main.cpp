@@ -40,6 +40,7 @@ double barycentricInterpolation(double x, double y, std::vector<double>& x_coord
 double maxAngleDegrees(double x, double y, double z, std::vector<double>& x_coord, std::vector<double>& y_coord, std::vector<double>& z_vals);
 void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts, Delaunay dt);
 double computeDistance(float Ax, float Ay, float Bx, float By);
+bool isValidCell(int row, int col, int numRows, int numCols);
 
 int main(int argc, char** argv)
 {
@@ -73,12 +74,10 @@ int main(int argc, char** argv)
 
   // Step 2: Computation of two geometric properties for each point that is not already labelled as ground
   // push all new ground points to groundPts vector
-  double d_max = 2;
-  double alpha_max = 8;
+  double d_max = 1.5;
+  double alpha_max = 7;
 
   for (int i = 0; i < croppedPts.size(); ++i) {
-    // check if pt is not already in groundPts
-    
     // find the triangle containing the point
     Point2 pt_xy(croppedPts[i].x(), croppedPts[i].y());
     Face_handle fh = dt.locate(pt_xy);
@@ -124,7 +123,7 @@ int main(int argc, char** argv)
   laplaceInterpolation(d, groundPts, dt);
 
   // Write the gridded DTM to an ASC file
-  d.write("../data/dtm.asc");
+  d.write("dtm.asc");
     
   //-- we're done, return 0 to say all went fine
   return 0;
@@ -272,8 +271,9 @@ double maxAngleDegrees(double x, double y, double z, std::vector<double>& x_coor
 
 void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts, Delaunay dt) {
   std::vector<std::vector<int>> nanCells = {};
+  int count = 0;
 
-  for (int row = 0; row < dtm._nrows; ++row) {
+  for (int row = 5; row < dtm._nrows && count < 3; ++row) {
     for (int col = 0; col < dtm._ncols; ++col) {
 
       // get coordinates of the center of the cells
@@ -295,6 +295,9 @@ void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts,
           
       double sum_weighted_height = 0;
       double total_weight = 0;
+
+      double edgeVx;
+      double xpi;
 
       if (vc != 0 && fc != 0) {
         do {
@@ -330,15 +333,17 @@ void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts,
             Point2 circumcenter_a = circumcenter(vh1->point(), vh2->point(), vh3->point());
             Point2 circumcenter_b = circumcenter(u1, u2, u3);
 
-            double edgeVx = computeDistance(circumcenter_a.x(), circumcenter_a.y(), circumcenter_b.x(), circumcenter_b.y());
-            double xpi = computeDistance(vertex_cell_center->point().x(), vertex_cell_center->point().y(), vc->point().x(), vc->point().y());
+            edgeVx = computeDistance(circumcenter_a.x(), circumcenter_a.y(), circumcenter_b.x(), circumcenter_b.y());
+            xpi = computeDistance(vertex_cell_center->point().x(), vertex_cell_center->point().y(), vc->point().x(), vc->point().y());
 
             double weight_i = edgeVx / xpi;
             double weighted_height = weight_i * vc->info();
 
-            sum_weighted_height += weighted_height;
-            total_weight += weight_i;
-            
+            if ((!isnan(edgeVx) && edgeVx > 0) && (!isnan(xpi) && xpi > 0)) {
+              sum_weighted_height += weighted_height;
+              total_weight += weight_i;
+            }
+
             ++vc; 
             ++fc;
             } while (vc != done);
@@ -350,6 +355,8 @@ void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts,
           // and iterate over it again at the end and get the average values from neighboring cells
           if (std::isnan(interpolated_z)) {
             nanCells.push_back({row, col});
+            std::cout << xpi << "xpi" << std::endl;
+            std::cout << edgeVx << "edge " << std::endl;
           }
 
           // remove vertex_cell_center from DT and proceed
@@ -360,45 +367,17 @@ void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts,
         }
     }
 
-    // filling nodata points using average of 4 adjacent cells
-    for (int i = 0; i < nanCells.size(); ++i) {
+    // filling nodata points using average of adjacent cells
+    /*for (int i = 0; i < nanCells.size(); ++i) {
       int row = nanCells[i][0];
       int col = nanCells[i][1];
-      // check if this cell exists before moving on
 
-      int divider = 4;
-      double sumHeightNeighbors = 0;
-
-      if (!std::isnan(dtm.data[dtm._nrows - row - 1][col + 1])) {
-        sumHeightNeighbors += dtm.data[dtm._nrows - row - 1][col + 1];
-      } else {
-        divider--;
+      // access cells above and below
+      
       }
-
-      if (!std::isnan(dtm.data[dtm._nrows - row - 1][col - 1])) {
-        sumHeightNeighbors += dtm.data[dtm._nrows - row - 1][col - 1];
-      } else {
-        divider--;
-      }
-
-      if (!std::isnan(dtm.data[dtm._nrows - row][col])) {
-        sumHeightNeighbors += dtm.data[dtm._nrows - row][col];
-      } else {
-        divider--;
-      }
-
-      if (!std::isnan(dtm.data[dtm._nrows - row - 2][col])) {
-        sumHeightNeighbors += dtm.data[dtm._nrows - row - 2][col];
-      } else {
-        divider--;
-      }
-
-      dtm.data[dtm._nrows - row - 1][col] = sumHeightNeighbors / divider;
-
+    */
     }
 
-    std::cout << "4" << std::endl;
-}
 
 double computeDistance(float Ax, float Ay, float Bx, float By) {
   double x_diff = abs(Ax - Bx);
@@ -407,4 +386,8 @@ double computeDistance(float Ax, float Ay, float Bx, float By) {
   double distance = sqrt((x_diff * x_diff) + (y_diff * y_diff));
 
   return distance;
+}
+
+bool isValidCell(int row, int col, int numRows, int numCols) {
+  return (row >= 0 && row < numRows && col >= 0 && col < numCols);
 }
