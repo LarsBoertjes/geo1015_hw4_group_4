@@ -13,7 +13,10 @@ todo's: https://docs.google.com/document/d/1QMNfYO7wIZpxRiS44uYSKETZf_nUEOBe1tBg
 *** INSTALLING PACKAGES ***
 
 Being able to run the C++ code, make sure the following libraries are installed in your C++ environment:
-- @Lars
+- CGAL
+- lasreader
+- laswriter
+- DatasetASC writer/reader
 
 Being able to run the Python code, make sure the following libraries are installed in your Python environment:
 - pandas
