@@ -38,15 +38,13 @@ void write_obj(Delaunay &dt);
 std::vector<Point3> extractLowestPtsInGrid (const std::vector<Point3>& points, int gridRows, int gridCols, double min_x, double max_x, double min_y, double max_y);
 double barycentricInterpolation(double x, double y, std::vector<double>& x_coord, std::vector<double>& y_coord, std::vector<double>& z_vals);
 double maxAngleDegrees(double x, double y, double z, std::vector<double>& x_coord, std::vector<double>& y_coord, std::vector<double>& z_vals);
-void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts, Delaunay dt);                                
-Point2 calculateCircumcenter(float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y);
+void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts, Delaunay dt);
 double computeDistance(float Ax, float Ay, float Bx, float By);
 
 int main(int argc, char** argv)
 {
   // read pointcloud from input file
-  std::vector<Point3> lsPts = read_lasfile("../data/69BZ2_13.LAZ", 10);
-  //std::vector<Point3> croppedData = read_lasfile("../data/")
+  std::vector<Point3> lsPts = read_lasfile("../data/69BZ2_13.LAZ", 1);
 
   // specify the bounding box of 500x500 meters
   double min_x = 187465.5;
@@ -76,63 +74,57 @@ int main(int argc, char** argv)
   // Step 2: Computation of two geometric properties for each point that is not already labelled as ground
   // push all new ground points to groundPts vector
   double d_max = 2;
-  double alpha_max = 3;
+  double alpha_max = 8;
 
   for (int i = 0; i < croppedPts.size(); ++i) {
     // check if pt is not already in groundPts
-    if (std::find(groundPts.begin(), groundPts.end(), croppedPts[i]) == groundPts.end()) {
-      // find the triangle containing the point
-      Point2 pt_xy(croppedPts[i].x(), croppedPts[i].y());
-      Face_handle fh = dt.locate(pt_xy);
+    
+    // find the triangle containing the point
+    Point2 pt_xy(croppedPts[i].x(), croppedPts[i].y());
+    Face_handle fh = dt.locate(pt_xy);
 
-      std::vector<double> x_coord;
-      std::vector<double> y_coord;
-      std::vector<double> z_vals;
+    std::vector<double> x_coord;
+    std::vector<double> y_coord;
+    std::vector<double> z_vals;
 
-      for (int i = 0; i < 3; i++) {
-        // if one of the vertices is of the big triangle don't add the vertex to list
-        if (dt.is_infinite(fh->vertex(i))) {
-          continue;
-        } else {
-          x_coord.push_back(fh->vertex(i)->point().x());
-          y_coord.push_back(fh->vertex(i)->point().y());
-          z_vals.push_back(fh->vertex(i)->info());
-        }
-      }
-
-      double heightPlaneAtP;
-
-      if (x_coord.size() == 3) {
-        heightPlaneAtP = barycentricInterpolation(croppedPts[i].x(), croppedPts[i].y(), x_coord, y_coord, z_vals);
-      } else if (x_coord.size() == 2) {
-        // Do a weighted average of the 2 finite points
-      } heightPlaneAtP = (z_vals[0] + z_vals[1]) / 2;
-
-      double heightDifference = abs(heightPlaneAtP - croppedPts[i].z());
-      double maxAngle = maxAngleDegrees(croppedPts[i].x(), croppedPts[i].y(), croppedPts[i].z(), x_coord, y_coord, z_vals);
-
-      if (maxAngle < alpha_max && heightDifference < d_max) {
-        groundPts.push_back(croppedPts[i]);
-        vh = dt.insert(Point2(croppedPts[i].x(), croppedPts[i].y()));
-        vh->info() = croppedPts[i].z();
+    for (int i = 0; i < 3; i++) {
+      // if one of the vertices is of the big triangle don't add the vertex to list
+      if (dt.is_infinite(fh->vertex(i))) {
+        continue;
+      } else {
+        x_coord.push_back(fh->vertex(i)->point().x());
+        y_coord.push_back(fh->vertex(i)->point().y());
+        z_vals.push_back(fh->vertex(i)->info());
       }
     }
+
+    double heightPlaneAtP;
+
+    if (x_coord.size() == 3) {
+      heightPlaneAtP = barycentricInterpolation(croppedPts[i].x(), croppedPts[i].y(), x_coord, y_coord, z_vals);
+    } else if (x_coord.size() == 2) {
+      // else do a weighted average of the 2 finite points
+    } heightPlaneAtP = (z_vals[0] + z_vals[1]) / 2;
+
+    double heightDifference = abs(heightPlaneAtP - croppedPts[i].z());
+    double maxAngle = maxAngleDegrees(croppedPts[i].x(), croppedPts[i].y(), croppedPts[i].z(), x_coord, y_coord, z_vals);
+
+    // check if point is within groundPts criteria
+    if (maxAngle < alpha_max && heightDifference < d_max) {
+      groundPts.push_back(croppedPts[i]);
+      vh = dt.insert(Point2(croppedPts[i].x(), croppedPts[i].y()));
+      vh->info() = croppedPts[i].z();
+    }
+    
   }
 
-  std::cout << "Number of groundPts after adding: " << groundPts.size() << std::endl;
-  std::cout << "Number of croppedPts after adding: " << croppedPts.size() << std::endl; 
-
-  // Please perform the laPlace Interpolation here and create a gridded DTM 50cmX50cm
-
+  // creating empty grid and filling it using laplacaInterpolation
   DatasetASC d = DatasetASC(1000, 1000, min_x, min_y, 0.5, -9999.0);
 
   laplaceInterpolation(d, groundPts, dt);
 
   // Write the gridded DTM to an ASC file
   d.write("../data/dtm.asc");
-
-  std::cout << d.data[119][648] << std::endl;
-  std::cout << d.data[d._nrows - 119 - 1][648] << std::endl;
     
   //-- we're done, return 0 to say all went fine
   return 0;
@@ -204,7 +196,7 @@ std::vector<Point3> extractLowestPtsInGrid (const std::vector<Point3>& points, i
   // create a 2D vector to store the lowest point in each cell
   std::vector<std::vector<Point3>> lowestPoints(gridRows, std::vector<Point3>(gridCols, Point3()));
 
-  // initialize lowest z values to positve infinity
+  // initialize lowest z values to positive infinity
   std::vector<std::vector<double>> lowestZValues(gridRows, std::vector<double>(gridCols, std::numeric_limits<double>::infinity()));
 
   // iterate through the points and update the lowest point in each cell
@@ -372,17 +364,40 @@ void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts,
     for (int i = 0; i < nanCells.size(); ++i) {
       int row = nanCells[i][0];
       int col = nanCells[i][1];
+      // check if this cell exists before moving on
 
+      int divider = 4;
       double sumHeightNeighbors = 0;
 
-      sumHeightNeighbors += dtm.data[dtm._nrows - row - 1][col + 1];
-      sumHeightNeighbors += dtm.data[dtm._nrows - row - 1][col - 1];
-      sumHeightNeighbors += dtm.data[dtm._nrows - row][col];
-      sumHeightNeighbors += dtm.data[dtm._nrows - row - 2][col];
+      if (!std::isnan(dtm.data[dtm._nrows - row - 1][col + 1])) {
+        sumHeightNeighbors += dtm.data[dtm._nrows - row - 1][col + 1];
+      } else {
+        divider--;
+      }
 
-      dtm.data[dtm._nrows - row - 1][col] = sumHeightNeighbors / 4;
+      if (!std::isnan(dtm.data[dtm._nrows - row - 1][col - 1])) {
+        sumHeightNeighbors += dtm.data[dtm._nrows - row - 1][col - 1];
+      } else {
+        divider--;
+      }
+
+      if (!std::isnan(dtm.data[dtm._nrows - row][col])) {
+        sumHeightNeighbors += dtm.data[dtm._nrows - row][col];
+      } else {
+        divider--;
+      }
+
+      if (!std::isnan(dtm.data[dtm._nrows - row - 2][col])) {
+        sumHeightNeighbors += dtm.data[dtm._nrows - row - 2][col];
+      } else {
+        divider--;
+      }
+
+      dtm.data[dtm._nrows - row - 1][col] = sumHeightNeighbors / divider;
 
     }
+
+    std::cout << "4" << std::endl;
 }
 
 double computeDistance(float Ax, float Ay, float Bx, float By) {
