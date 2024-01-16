@@ -1,6 +1,7 @@
 import argparse
 import rasterio
 import sys
+import numpy as np
 
 def subtract_rasters(canopy_height, dtm, output_path):
     # Read the first raster
@@ -13,8 +14,10 @@ def subtract_rasters(canopy_height, dtm, output_path):
         data2 = src2.read(1)
         transform2 = src2.transform
 
+    tolerance = 1e-8
+    
     # Check if the rasters have the same shape and transformation
-    if data1.shape != data2.shape or transform1 != transform2:
+    if data1.shape != data2.shape or not np.allclose(transform1, transform2, atol=tolerance):
         raise ValueError("Input rasters must have the same shape and transformation.")
 
     # Perform the subtraction
