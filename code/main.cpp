@@ -123,7 +123,7 @@ int main(int argc, char** argv)
   laplaceInterpolation(d, groundPts, dt);
 
   // Write the gridded DTM to an ASC file
-  d.write("dtm.asc");
+  d.write("../data/dtm.asc");
     
   //-- we're done, return 0 to say all went fine
   return 0;
@@ -270,10 +270,7 @@ double maxAngleDegrees(double x, double y, double z, std::vector<double>& x_coor
 }
 
 void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts, Delaunay dt) {
-  std::vector<std::vector<int>> nanCells = {};
-  int count = 0;
-
-  for (int row = 5; row < dtm._nrows && count < 3; ++row) {
+  for (int row = 0; row < dtm._nrows; ++row) {
     for (int col = 0; col < dtm._ncols; ++col) {
 
       // get coordinates of the center of the cells
@@ -339,6 +336,7 @@ void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts,
             double weight_i = edgeVx / xpi;
             double weighted_height = weight_i * vc->info();
 
+            // handling of nodata points
             if ((!isnan(edgeVx) && edgeVx > 0) && (!isnan(xpi) && xpi > 0)) {
               sum_weighted_height += weighted_height;
               total_weight += weight_i;
@@ -351,31 +349,13 @@ void laplaceInterpolation(DatasetASC &dtm, const std::vector<Point3> &groundPts,
 
           double interpolated_z = sum_weighted_height / total_weight;
 
-          // Handling of nodata, since getting the nearest vertex will give us a nan value we store it here in an array
-          // and iterate over it again at the end and get the average values from neighboring cells
-          if (std::isnan(interpolated_z)) {
-            nanCells.push_back({row, col});
-            std::cout << xpi << "xpi" << std::endl;
-            std::cout << edgeVx << "edge " << std::endl;
-          }
-
           // remove vertex_cell_center from DT and proceed
           dt.remove(vertex_cell_center);
 
           // add interpolated z value to the empty grid
           dtm.data[dtm._nrows - row - 1][col] = interpolated_z;
         }
-    }
-
-    // filling nodata points using average of adjacent cells
-    /*for (int i = 0; i < nanCells.size(); ++i) {
-      int row = nanCells[i][0];
-      int col = nanCells[i][1];
-
-      // access cells above and below
-      
       }
-    */
     }
 
 
