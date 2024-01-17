@@ -38,6 +38,7 @@ Go to main.cpp and check the input files and boundaries:
 - If you want to change the GFTIN parameters you can do so in lines 77 & 78.
 - Specify the name and output path of your ASCII output file in line 126.
 - Make an run main.cpp file
+- Also make sure to use the DataSetASC.cpp file we uploaded in this repository.  
 
 STEP 2.
 Go to main.py and check the input files and boundaries:
