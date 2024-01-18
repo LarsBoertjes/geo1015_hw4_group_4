@@ -2,14 +2,7 @@
 Lars Boertjes - 4704541,
 Noah Alting - 4828968,
 Marieke van Arnhem - 4918738
-
-*** DOCUMENTATION ***
-
-report editor: https://www.overleaf.com/3335222756vbxkvhxqjdzb#79d9ec
-
-todo's: https://docs.google.com/document/d/1QMNfYO7wIZpxRiS44uYSKETZf_nUEOBe1tBgOgcwHUM/edit
-
---------------------------------------------------------------------------
+---------------------------------------------
 *** INSTALLING PACKAGES ***
 
 Being able to run the C++ code, make sure the following libraries are installed in your C++ environment:
@@ -38,6 +31,7 @@ Go to main.cpp and check the input files and boundaries:
 - If you want to change the GFTIN parameters you can do so in lines 77 & 78.
 - Specify the name and output path of your ASCII output file in line 126.
 - Make an run main.cpp file
+- Also make sure to use the DataSetASC.cpp file we uploaded in this repository.  
 
 STEP 2.
 Go to main.py and check the input files and boundaries:
